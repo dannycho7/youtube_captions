@@ -2,12 +2,10 @@
 require("dotenv").config();
 
 const fs = require("fs");
-const YouTube = require("youtube-node")
-const yt = new YouTube;
-yt.setKey(process.env.YT_API_KEY);
+const request = require("request");
 
-if(process.argv.length != 3) throw new Error("Provide a topic list file path");
-const topic_list = JSON.parse(fs.readFileSync(process.argv[2]));
+const yt_url_base = "https://www.googleapis.com/youtube/v3/search";
+const topic_list = JSON.parse(fs.readFileSync(process.argv[2] || "topic_list.txt"));
 
 const topics = topic_list.map((topic) => {
   return new Promise((resolve, reject) => search_chunk(topic, resolve));
@@ -23,25 +21,24 @@ Promise.all(topics)
 
 
 function search_chunk(topic, resolve, nextPageToken) {
-  yt.search(topic, 50, { pageToken: nextPageToken }, function(err, result) {
+  let url = yt_url_base +
+  `?key=${process.env.YT_API_KEY}&q=${topic}&pageToken=${nextPageToken || ""}`+
+  `&part=snippet&type=video&relevanceLanguage=en&videoCaption=closedCaption&maxResults=50`;
+
+  request(url, (err, res, body) => {
+    if(err || !res || !body) return;
+    let result = JSON.parse(body);
     result.items.forEach((item) => {
       let videoId = item.id.videoId;
       if(!videoId) return;
 
-      console.log(item);
-      let description = item.snippet.description;
-      let title = item.snippet.title;
-
-      video_info[videoId] = {
-        description: description,
-        title: title
-      }
+      video_info[videoId] = item.snippet
+      video_info[videoId].channelTitle = item.channelTitle;
     });
-
     console.log(`Received ${result.items.length} items from youtube request about ${topic}`);
     console.log(`Unique videos: ${Object.keys(video_info).length}`);
-    
-    (Object.keys(video_info).length >= 100000 || result.items.length == 0) ?
+
+    (Object.keys(video_info).length >= 100000 || result.items.length == 0 || !result.nextPageToken) ?
     resolve() : search_chunk(topic, resolve, result.nextPageToken);
   });
 }

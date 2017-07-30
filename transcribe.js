@@ -2,33 +2,35 @@
 
 const fs = require("fs");
 const request = require("request");
+const path = require("path");
 const parseString = require("xml2js").parseString;
 
 const output = [];
 const requestClusters = [];
-const incrementFactor = 2500;
+const incrementFactor = 250;
 
-let filename = process.argv[2] || "video_list.txt";
+const file_path = path.join(__dirname, "output", Date.now().toString());
+let writeStream = fs.createWriteStream(file_path);
+writeStream.on("close", () => console.log(`Finished transcribing and it resulted in ${output.length} videos`));
 
+const filename = process.argv[2] || "video_list.txt";
 const video_info = JSON.parse(fs.readFileSync(filename).toString());
 const video_id_list = Object.keys(video_info);
-
-console.log(`Attempting to transcribe ${video_id_list.length} videos....`)
 
 let temp1 = fs.createWriteStream("log1.txt");
 let temp2 = fs.createWriteStream("log2.txt");
 
-startTranscription();
-
-function startTranscription() {
+(function startTranscription() {
+	console.log(`Attempting to transcribe ${video_id_list.length} videos....`);
 	transcribeCluster();
-}
+})();
 
 function transcribeCluster(clusterNumber = 0) {
 	let startIndex = clusterNumber * incrementFactor;
-	if(startIndex > video_id_list.length) return writeTranscriptions();
+	if(startIndex > video_id_list.length) return finishTranscriptions();
 
-	console.log(`Transcribing cluster ${clusterNumber + 1}`)
+	console.log(`Transcribing cluster ${clusterNumber + 1}; ${output.length} videos currently transcribed`);
+
 	let requests = video_id_list.slice(startIndex, startIndex + incrementFactor).map((video_id) => {
 		return new Promise((resolve, reject) => {
 			let req_list_url = `https://www.youtube.com/api/timedtext?v=${video_id}&type=list`;
@@ -45,7 +47,7 @@ function transcribeCluster(clusterNumber = 0) {
 						if (val.$.lang_code.substr(0,2) === "en") {
 							getTranscript(video_id).then((transcript_json) => {
 								output.push(transcript_json);
-								resolve();
+								return resolve();
 							});
 							found = true;
 						}
@@ -61,11 +63,13 @@ function transcribeCluster(clusterNumber = 0) {
 	Promise.all(requests).then(() => transcribeCluster(++clusterNumber));
 }
 	
-function writeTranscriptions() {
-	let writeStream = fs.createWriteStream(`output/${Date.now()}.txt`);
+function finishTranscriptions() {
+	writeStream.on("error", (err) => {
+		console.log(JSON.stringify(output).length);
+		throw err;
+	});
 	writeStream.write(JSON.stringify(output));
 	writeStream.close();
-	console.log(`Finished transcribing and it resulted in ${output.length} videos`);
 }
 
 
