@@ -3,3 +3,4 @@ node_modules/
 output/
 log*
 *.txt
+!topic_list.txt
