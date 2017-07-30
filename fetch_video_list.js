@@ -16,21 +16,41 @@ const video_info = {};
 
 Promise.all(topics)
 .then(() => {
+  console.log(`Entered promise all and there are ${Object.keys(video_info).length} videos in video_info`);
 
-  add_info_promises = Object.keys(video_info).map((key) => {
-    let url = yt_video_url_base + 
-    `?key=${process.env.YT_API_KEY}&id=${key}&part=statistics`;
+  const add_info_promises = [];
+  let partition_id_list = [];
+  let added_count = 0;
+  for(let key in video_info) {
+    if(partition_id_list.length == 50 || added_count >= Object.keys(video_info).length) {
+      let partition = new Promise((resolve, reject) => {
+        let keyList = partition_id_list.join(",");
+        let url = yt_video_url_base + 
+        `?key=${process.env.YT_API_KEY}&id=${keyList}&part=statistics`;
+        console.log(`Request sent for ${url}`);
+        
+        request(url, (err, response, body) => {
+          if(err) throw err;
 
-    return new Promise((resolve, reject) => {
-      request(url, (err, response, body) => {
-        video_info[key].statistics = JSON.parse(body).items[0].statistics;
-        resolve();
+          JSON.parse(body).items.forEach((item) => {
+            video_info[item.id] = item.statistics;
+          });
+          resolve();
+        });
       });
-    });
-  })
+
+      partition_id_list = [];
+      add_info_promises.push(partition);
+    }
+    added_count++;
+    partition_id_list.push(key);
+  }
+
+  console.log(`add_info_promises length: ${add_info_promises.length}`);
 
   Promise.all(add_info_promises)
   .then(() => {
+    console.log(`video info amount: ${Object.keys(video_info).length}`);
     let writeStream = fs.createWriteStream("video_list.txt");
     writeStream.on("close", () => console.log("All write operations successful"));
     writeStream.write(JSON.stringify(video_info));
@@ -39,10 +59,14 @@ Promise.all(topics)
 });
 
 
+function append_info(add_info_promises, currentKey, index, partition_id_list) {
+  
+}
+
 function search_chunk(topic, resolve, nextPageToken) {
   let url = yt_search_url_base +
   `?key=${process.env.YT_API_KEY}&q=${topic}&pageToken=${nextPageToken || ""}`+
-  `&part=snippet&type=video&relevanceLanguage=en&videoCaption=closedCaption&maxResults=50&order=viewCount`;
+  `&part=snippet&type=video&relevanceLanguage=en&videoCaption=closedCaption&maxResults=50`;
 
   request(url, (err, res, body) => {
     if(err || !res || !body) return;
