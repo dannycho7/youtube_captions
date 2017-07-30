@@ -5,13 +5,11 @@ const request = require("request");
 const path = require("path");
 const parseString = require("xml2js").parseString;
 
-const output = [];
+let output_count = 0;
+let output = [];
+let file_count = 0;
 const requestClusters = [];
 const incrementFactor = 250;
-
-const file_path = path.join(__dirname, "output", Date.now().toString());
-let writeStream = fs.createWriteStream(file_path);
-writeStream.on("close", () => console.log(`Finished transcribing and it resulted in ${output.length} videos`));
 
 const filename = process.argv[2] || "video_list.txt";
 const video_info = JSON.parse(fs.readFileSync(filename).toString());
@@ -22,14 +20,29 @@ let temp2 = fs.createWriteStream("log2.txt");
 
 (function startTranscription() {
 	console.log(`Attempting to transcribe ${video_id_list.length} videos....`);
-	transcribeCluster();
+	partitionCluster();
 })();
 
-function transcribeCluster(clusterNumber = 0) {
-	let startIndex = clusterNumber * incrementFactor;
-	if(startIndex > video_id_list.length) return finishTranscriptions();
+function partitionCluster(clusterStartNumber = 0) {
+	if(clusterStartNumber * incrementFactor > video_id_list.length) {
+		return console.log(`Finished transcribing and it resulted in ${output_count} videos`);
+	}
+	new Promise((resolve, reject) => {
+		file_count++;
+		transcribeCluster(clusterStartNumber, resolve);
+	})
+	.then((prevClusterEndNumber) => {
+		writeTranscription().then(() => {
+			partitionCluster(prevClusterEndNumber);
+		});
+	});
+}
 
-	console.log(`Transcribing cluster ${clusterNumber + 1}; ${output.length} videos currently transcribed`);
+function transcribeCluster(clusterNumber = 0, finish) {
+	let startIndex = clusterNumber * incrementFactor;
+	if(startIndex > 10000 * file_count) return finish(clusterNumber);
+
+	console.log(`Transcribing cluster ${clusterNumber + 1}; ${output_count} videos currently transcribed`);
 
 	let requests = video_id_list.slice(startIndex, startIndex + incrementFactor).map((video_id) => {
 		return new Promise((resolve, reject) => {
@@ -44,9 +57,10 @@ function transcribeCluster(clusterNumber = 0) {
 					let found = false;
 
 					result.transcript_list.track.forEach((val) => {
-						if (val.$.lang_code.substr(0,2) === "en") {
+						if (val.$.lang_code.substr(0, 2) === "en") {
 							getTranscript(video_id).then((transcript_json) => {
 								output.push(transcript_json);
+								output_count++;
 								return resolve();
 							});
 							found = true;
@@ -60,21 +74,26 @@ function transcribeCluster(clusterNumber = 0) {
 			});
 		});
 	});
-	Promise.all(requests).then(() => transcribeCluster(++clusterNumber));
+	Promise.all(requests).then(() => transcribeCluster(++clusterNumber, finish));
 }
 	
-function finishTranscriptions() {
-	writeStream.on("error", (err) => {
-		console.log(JSON.stringify(output).length);
-		throw err;
+function writeTranscription() {
+	return new Promise((resolve, reject) => {
+		const file_path = path.join(__dirname, "output", Date.now().toString());
+		let writeStream = fs.createWriteStream(file_path);
+		writeStream.on("close", () => {
+			output = [];
+			resolve();			
+		});
+
+		writeStream.write(JSON.stringify(output));
+		writeStream.close();
 	});
-	writeStream.write(JSON.stringify(output));
-	writeStream.close();
 }
 
 
 function formatTranscript(transcript, video_id) {
-	let formatted_transcript = { video_id: video_id };
+	let formatted_transcript = { video_id: video_id, info: video_info[video_id] };
 	formatted_transcript.cues = transcript.transcript.text.map((cue) => {
 		let time_info = cue.$;
 		return {
