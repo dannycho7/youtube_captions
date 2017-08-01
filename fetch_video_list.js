@@ -80,7 +80,7 @@ function search_chunk(topic, resolve, nextPageToken) {
     console.log(`Received ${result.items.length} items from youtube request about ${topic}`);
     console.log(`Unique videos: ${Object.keys(video_info).length}`);
 
-    (Object.keys(video_info).length >= 100000 || result.items.length == 0 || !result.nextPageToken) ?
+    (Object.keys(video_info).length >= (process.argv[2] || 100000) || result.items.length == 0 || !result.nextPageToken) ?
     resolve() : search_chunk(topic, resolve, result.nextPageToken);
   });
 }
