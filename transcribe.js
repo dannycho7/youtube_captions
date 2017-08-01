@@ -1,6 +1,7 @@
 #! /usr/bin/env node
 
 const fs = require("fs");
+const mkdirp = require("mkdirp");
 const request = require("request");
 const path = require("path");
 const parseString = require("xml2js").parseString;
@@ -80,14 +81,17 @@ function transcribeCluster(clusterNumber = 0, finish) {
 function writeTranscription() {
 	return new Promise((resolve, reject) => {
 		const file_path = path.join(__dirname, "output", "new-" + Date.now().toString());
-		let writeStream = fs.createWriteStream(file_path);
-		writeStream.on("close", () => {
-			output = [];
-			resolve();			
-		});
+		mkdirp("output", (err) => {
+			if(err) throw err;
+			let writeStream = fs.createWriteStream(file_path);
+			writeStream.on("close", () => {
+				output = [];
+				resolve();			
+			});
 
-		writeStream.write(JSON.stringify(output));
-		writeStream.close();
+			writeStream.write(JSON.stringify(output));
+			writeStream.close();
+		});
 	});
 }
 
