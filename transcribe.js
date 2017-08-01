@@ -9,7 +9,7 @@ let output_count = 0;
 let output = [];
 let file_count = 0;
 const requestClusters = [];
-const incrementFactor = 250;
+const incrementFactor = 200;
 
 const filename = process.argv[2] || "video_list.txt";
 const video_info = JSON.parse(fs.readFileSync(filename).toString());
@@ -40,7 +40,7 @@ function partitionCluster(clusterStartNumber = 0) {
 
 function transcribeCluster(clusterNumber = 0, finish) {
 	let startIndex = clusterNumber * incrementFactor;
-	if(startIndex > 10000 * file_count) return finish(clusterNumber);
+	if(startIndex > 200 * file_count) return finish(clusterNumber);
 
 	console.log(`Transcribing cluster ${clusterNumber + 1}; ${output_count} videos currently transcribed`);
 
@@ -79,7 +79,7 @@ function transcribeCluster(clusterNumber = 0, finish) {
 	
 function writeTranscription() {
 	return new Promise((resolve, reject) => {
-		const file_path = path.join(__dirname, "output", Date.now().toString());
+		const file_path = path.join(__dirname, "output", "new-" + Date.now().toString());
 		let writeStream = fs.createWriteStream(file_path);
 		writeStream.on("close", () => {
 			output = [];
