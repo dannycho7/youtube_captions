@@ -16,7 +16,7 @@ const video_info = {};
 
 Promise.all(topics)
 .then(() => {
-  console.log(`Entered promise all and there are ${Object.keys(video_info).length} videos in video_info`);
+  console.log(`There are ${Object.keys(video_info).length} videos in video_info`);
 
   const add_info_promises = [];
   let partition_id_list = [];
@@ -27,13 +27,14 @@ Promise.all(topics)
         let keyList = partition_id_list.join(",");
         let url = yt_video_url_base + 
         `?key=${process.env.YT_API_KEY}&id=${keyList}&part=statistics`;
+        
         console.log(`Request sent for ${url}`);
         
         request(url, (err, response, body) => {
           if(err) throw err;
 
           JSON.parse(body).items.forEach((item) => {
-            video_info[item.id] = item.statistics;
+            video_info[item.id].statistics = item.statistics;
           });
           resolve();
         });
@@ -45,8 +46,6 @@ Promise.all(topics)
     added_count++;
     partition_id_list.push(key);
   }
-
-  console.log(`add_info_promises length: ${add_info_promises.length}`);
 
   Promise.all(add_info_promises)
   .then(() => {
