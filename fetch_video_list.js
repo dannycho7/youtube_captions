@@ -57,11 +57,6 @@ Promise.all(topics)
   })
 });
 
-
-function append_info(add_info_promises, currentKey, index, partition_id_list) {
-  
-}
-
 function search_chunk(topic, resolve, nextPageToken) {
   let url = yt_search_url_base +
   `?key=${process.env.YT_API_KEY}&q=${topic}&pageToken=${nextPageToken || ""}`+
@@ -80,7 +75,7 @@ function search_chunk(topic, resolve, nextPageToken) {
     console.log(`Received ${result.items.length} items from youtube request about ${topic}`);
     console.log(`Unique videos: ${Object.keys(video_info).length}`);
 
-    (Object.keys(video_info).length >= (process.argv[2] || 100000) || result.items.length == 0 || !result.nextPageToken) ?
+    (Object.keys(video_info).length >= (process.argv[3] || 100000) || result.items.length == 0 || !result.nextPageToken) ?
     resolve() : search_chunk(topic, resolve, result.nextPageToken);
   });
 }
