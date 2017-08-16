@@ -6,7 +6,7 @@ const request = require("request");
 
 const yt_search_url_base = "https://www.googleapis.com/youtube/v3/search";
 const yt_video_url_base = "https://www.googleapis.com/youtube/v3/videos";
-const topic_list = JSON.parse(fs.readFileSync(process.argv[2] || "topic_list.txt"));
+const topic_list = JSON.parse(fs.readFileSync(process.argv[2] || "topic_list.json"));
 
 const topics = topic_list.map((topic) => {
   return new Promise((resolve, reject) => search_chunk(topic, resolve));
@@ -50,7 +50,7 @@ Promise.all(topics)
   Promise.all(add_info_promises)
   .then(() => {
     console.log(`video info amount: ${Object.keys(video_info).length}`);
-    let writeStream = fs.createWriteStream("video_list.txt");
+    let writeStream = fs.createWriteStream("video_list.json");
     writeStream.on("close", () => console.log("All write operations successful"));
     writeStream.write(JSON.stringify(video_info));
     writeStream.close();
@@ -61,9 +61,8 @@ function search_chunk(topic, resolve, nextPageToken) {
   let url = yt_search_url_base +
   `?key=${process.env.YT_API_KEY}&q=${topic}&pageToken=${nextPageToken || ""}`+
   `&part=snippet&type=video&relevanceLanguage=en&videoCaption=closedCaption&maxResults=50`;
-
   request(url, (err, res, body) => {
-    if(err || !res || !body) return;
+    if(err || !res || !body) { resolve(); console.log(err); return; }
     let result = JSON.parse(body);
     result.items.forEach((item) => {
       let videoId = item.id.videoId;
@@ -75,7 +74,7 @@ function search_chunk(topic, resolve, nextPageToken) {
     console.log(`Received ${result.items.length} items from youtube request about ${topic}`);
     console.log(`Unique videos: ${Object.keys(video_info).length}`);
 
-    (Object.keys(video_info).length >= (process.argv[3] || 100000) || result.items.length == 0 || !result.nextPageToken) ?
+    (Object.keys(video_info).length >= (process.argv[3] || 50) || result.items.length == 0 || !result.nextPageToken) ?
     resolve() : search_chunk(topic, resolve, result.nextPageToken);
   });
 }

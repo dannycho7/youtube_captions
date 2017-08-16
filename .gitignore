@@ -1,6 +1,6 @@
 .env
 node_modules/
 output/
-log*
+*log*
 *.txt
-!topic_list.txt
+video_list.json
