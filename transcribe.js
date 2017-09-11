@@ -9,7 +9,6 @@ const parseString = require("xml2js").parseString;
 let output_count = 0;
 let output = [];
 let file_count = 0;
-const requestClusters = [];
 const incrementFactor = 200;
 
 const filename = process.argv[2] || "video_list.json";
@@ -32,11 +31,11 @@ function partitionCluster(clusterStartNumber = 0) {
 		file_count++;
 		transcribeCluster(clusterStartNumber, resolve);
 	})
-	.then((prevClusterEndNumber) => {
-		writeTranscription().then(() => {
-			partitionCluster(prevClusterEndNumber);
+		.then((prevClusterEndNumber) => {
+			writeTranscription().then(() => {
+				partitionCluster(prevClusterEndNumber);
+			});
 		});
-	});
 }
 
 function transcribeCluster(clusterNumber = 0, finish) {
