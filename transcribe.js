@@ -1,5 +1,6 @@
 #! /usr/bin/env node
 
+const argv = require("yargs").argv;
 const fs = require("fs");
 const mkdirp = require("mkdirp");
 const request = require("request");
@@ -11,7 +12,7 @@ let output = [];
 let file_count = 0;
 const incrementFactor = 200;
 
-const filename = process.argv[2] || "video_list.json";
+const filename = argv.video_list || "video_list.json";
 const video_info = JSON.parse(fs.readFileSync(filename).toString());
 const video_id_list = Object.keys(video_info);
 

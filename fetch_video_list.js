@@ -1,12 +1,13 @@
 #! /usr/bin/env node
 require("dotenv").config();
 
+const argv = require("yargs");
 const fs = require("fs");
 const request = require("request");
 
 const yt_search_url_base = "https://www.googleapis.com/youtube/v3/search";
 const yt_video_url_base = "https://www.googleapis.com/youtube/v3/videos";
-const topic_list = JSON.parse(fs.readFileSync(process.argv[2] || "topic_list.json"));
+const topic_list = JSON.parse(fs.readFileSync(argv.topic_list || "topic_list.json"));
 
 const topics = topic_list.map((topic) => {
 	return new Promise((resolve, reject) => search_chunk(topic, resolve));
@@ -74,7 +75,7 @@ function search_chunk(topic, resolve, nextPageToken) {
 		console.log(`Received ${result.items.length} items from youtube request about ${topic}`);
 		console.log(`Unique videos: ${Object.keys(video_info).length}`);
 
-		(Object.keys(video_info).length >= (process.argv[3] || 50000000) || result.items.length == 0 || !result.nextPageToken) ?
+		(Object.keys(video_info).length >= (argv.limit || 500) || result.items.length == 0 || !result.nextPageToken) ?
 			resolve() : search_chunk(topic, resolve, result.nextPageToken);
 	});
 }
