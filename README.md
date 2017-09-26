@@ -2,6 +2,11 @@ A way to aggregate large amounts of youtube video captions, with minimal API usa
 
 Used for Invidia @ Greylock Hackfest 2017
 
-Proper docs and usability coming soon! (Will be up on the 20th)
+### Sample Usage:
+```
+$ node ./fetch_video_list
+$ node ./transcribe
+```
+Output should show up in output folder
 
 This currently only supports grabbing manual transcriptions. It will eventually become a CLI that supports both automatic and manual transcriptions. If you are interested in the script for including automatic captions, feel free to message me for it at dannycho7@gmail.com! (Private, but finished)
